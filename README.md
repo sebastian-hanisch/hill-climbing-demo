@@ -9,7 +9,7 @@ Die Suche probiert kleine Änderungen – zwei Stopps **vertauschen**, ein Stüc
 **Einordnung in die Reihe (die Kanten des Graphen):** Hill Climbing ist die **Wurzel**: eine einzige Lösung, nur Verbesserungen. Alle sechs Nachfolger setzen an derselben Schwäche an, jeder auf einem anderen Weg. Die Linie hat **keinen Konvergenzpunkt**.
 ```
 hill-climbing-demo (Wurzel: nur bergab, bleibt im ersten Optimum stecken)   [dieses Stück]
-  ├─ Simulated Annealing      (nimmt Verschlechterungen an, Abkühlplan)                      [nicht gebaut]
+  ├─ simulated-annealing-demo (nimmt Verschlechterungen an, Abkühlplan)                      [gebaut]
   ├─ Iterated Local Search → VNS → ALNS  (stört ein Optimum; wechselt die Nachbarschaft; lernt Umbauten)   [nicht gebaut]
   ├─ Tabu Search              (Gedächtnis gegen Rückwege)                                    [nicht gebaut]
   └─ GRASP                    (randomisierte Konstruktion, viele Starts)                     [nicht gebaut]
