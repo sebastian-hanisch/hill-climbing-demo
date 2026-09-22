@@ -156,3 +156,40 @@ def test_scaling_table_structure(monkeypatch):
     tab = ev.scaling_table()
     assert len(tab) == 2 and all([r["value"] for r in blk["rows"]] == [10, 20] for blk in tab)
     assert tab[0]["label"] != tab[1]["label"]
+
+
+# --- Kandidatenlisten + Don't-Look-Bits --------------------------------------------------------------------------------------------------------
+
+
+def test_full_restarts_and_dlb_restarts_use_at_least_one_full_descent_and_respect_the_budget():
+    inst, D = ev.instance(40, 0, 100000)
+    cand = ev.DLB.build_candidate_lists(D)
+    single = A.descend(D, A.random_tour(len(D), np.random.default_rng(0)), "2opt", "first", keep_steps=False)
+    _, starts, used = ev.full_restarts(D, 1000, 0)
+    assert starts == 1 and used > 1000                             # Budget unter einem Abstieg: der erste läuft trotzdem zu Ende
+    _, starts, used = ev.dlb_restarts(D, cand, 1000, 0)
+    assert starts >= 1 and used >= 1000
+    best_full, starts_full, used_full = ev.full_restarts(D, 5 * single.evaluations, 0)
+    assert starts_full >= 3 and used_full <= 5 * single.evaluations + 2 * len(D) ** 2
+
+
+def test_dlb_restarts_use_far_fewer_evaluations_per_start_than_full_restarts():
+    inst, D = ev.instance(60, 0, 100000)
+    cand = ev.DLB.build_candidate_lists(D)
+    best_full, starts_full, used_full = ev.full_restarts(D, 200000, 0)
+    best_dlb, starts_dlb, used_dlb = ev.dlb_restarts(D, cand, 200000, 0)
+    assert starts_dlb > 20 * starts_full                            # gemessen: ~300 gegen ~3 Starts
+    assert best_dlb <= best_full                                    # mehr, billigere Neustarts finden mindestens so gute Touren
+
+
+def test_dlb_single_descent_table_fields():
+    r = ev.dlb_single_descent_table(seeds=(100000, 100001), n_starts=2)
+    assert r["dlb_evaluations"] < r["full_evaluations"] / 20         # gemessen: ~650 gegen ~74 000
+    assert abs(r["dlb_gap"] - r["full_gap"]) < 3.0                   # vergleichbare Güte trotz weit weniger Bewertungen
+
+
+def test_dlb_budget_table_structure_and_monotonicity():
+    rows = ev.dlb_budget_table(budgets=(25000, 200000), seeds=(100000, 100001), chains=2)
+    assert [r["value"] for r in rows] == [25000, 200000]
+    assert rows[1]["dlb_starts"] > rows[0]["dlb_starts"] and rows[1]["full_starts"] >= rows[0]["full_starts"]
+    assert rows[1]["dlb_gap"] <= rows[0]["dlb_gap"] + 1.0             # mehr Budget wird nicht schlechter (bis auf Rauschen)

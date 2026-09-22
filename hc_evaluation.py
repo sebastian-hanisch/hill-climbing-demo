@@ -10,6 +10,7 @@ import numpy as np
 
 import hc_algorithm as A
 import hc_constants as C
+import hc_dlb as DLB
 import hc_scenario as S
 
 
@@ -174,3 +175,77 @@ SCALING_CONFIGS = (("2-opt, zufälliger Start, erste Verbesserung", dict(neighbo
 def scaling_table(base=Settings()):
     """Züge, Bewertungen, Zeit und Abstand zur Schranke über die Stoppzahl, für zwei Verfahren."""
     return [{"label": label, "rows": sweep("n", replace(base, cluster_share=base.cluster_share, **kw), C.SCALING_N)} for label, kw in SCALING_CONFIGS]
+
+
+# --- Kandidatenlisten + Don't-Look-Bits (hc_dlb.py) ---------------------------------------------------------------------------------------------
+
+
+def full_restarts(D_mat, budget, seed, neighborhood="2opt", rule="first"):
+    """Abstiege mit dem vollen Rescan aus zufälligen Startlösungen, bis die bewerteten Nachbarn das Budget erreichen
+    (der erste läuft immer zu Ende, weitere mit dem Rest); wie hill_climbing_restarts in der Simulated-Annealing-Demo.
+    Gibt (beste Länge, Zahl der Starts, verbrauchte Bewertungen) zurück."""
+    rng = np.random.default_rng(seed)
+    used, starts, best = 0, 0, None
+    while used < budget or best is None:
+        cap = None if best is None else budget - used
+        r = A.descend(D_mat, A.random_tour(len(D_mat), rng), neighborhood, rule, keep_steps=False, max_evaluations=cap)
+        used += r.evaluations
+        starts += 1
+        if best is None or r.length < best:
+            best = r.length
+    return best, starts, used
+
+
+def dlb_restarts(D_mat, cand, budget, seed):
+    """Dieselbe Regel wie full_restarts, mit dem Kandidatenlisten- + Don't-Look-Bit-Abstieg (hc_dlb.dlb_descend)."""
+    rng = np.random.default_rng(seed)
+    used, starts, best = 0, 0, None
+    while used < budget or best is None:
+        cap = None if best is None else budget - used
+        r = DLB.dlb_descend(D_mat, A.random_tour(len(D_mat), rng), cand, seed=starts, max_evaluations=cap)
+        used += r.evaluations
+        starts += 1
+        if best is None or r.length < best:
+            best = r.length
+    return best, starts, used
+
+
+def dlb_single_descent_table(base=Settings(), seeds=C.SWEEP_SEEDS, n_starts=C.SWEEP_STARTS):
+    """Ein Abstieg, voller Rescan gegen Kandidatenliste + Don't-Look-Bits: mittlere Bewertungen und Abstand zur Schranke
+    (jeweils vom selben Start, damit die Güte direkt vergleichbar ist)."""
+    full_gaps, full_evals, dlb_gaps, dlb_evals = [], [], [], []
+    for seed in seeds:
+        inst, D_mat = instance(base.n, base.cluster_share, seed)
+        bound = reference_bound(base.n, base.cluster_share, seed)
+        cand = DLB.build_candidate_lists(D_mat)
+        for k in range(n_starts):
+            t0 = A.random_tour(len(D_mat), np.random.default_rng(k))
+            full = A.descend(D_mat, t0, base.neighborhood, base.rule, keep_steps=False)
+            r = DLB.dlb_descend(D_mat, t0, cand, seed=k)
+            full_gaps.append(100 * (full.length - bound) / bound)
+            full_evals.append(full.evaluations)
+            dlb_gaps.append(100 * (r.length - bound) / bound)
+            dlb_evals.append(r.evaluations)
+    return {"full_gap": float(np.mean(full_gaps)), "full_evaluations": float(np.mean(full_evals)),
+            "dlb_gap": float(np.mean(dlb_gaps)), "dlb_evaluations": float(np.mean(dlb_evals))}
+
+
+def dlb_budget_table(base=Settings(), budgets=C.DLB_BUDGETS, seeds=C.SWEEP_SEEDS, chains=C.DLB_CHAINS):
+    """Abstand zur Schranke über das Budget: Neustarts mit vollem Rescan gegen Neustarts mit Kandidatenliste + Don't-Look-Bits."""
+    rows = []
+    for budget in budgets:
+        full_gaps, full_starts, dlb_gaps, dlb_starts = [], [], [], []
+        for seed in seeds:
+            inst, D_mat = instance(base.n, base.cluster_share, seed)
+            bound = reference_bound(base.n, base.cluster_share, seed)
+            cand = DLB.build_candidate_lists(D_mat)
+            for ch in range(chains):
+                fb, fs, _ = full_restarts(D_mat, budget, ch, base.neighborhood, base.rule)
+                db, ds, _ = dlb_restarts(D_mat, cand, budget, ch * 1000 + seed)
+                full_gaps.append(100 * (fb - bound) / bound)
+                full_starts.append(fs)
+                dlb_gaps.append(100 * (db - bound) / bound)
+                dlb_starts.append(ds)
+        rows.append({"value": budget, "full_gap": float(np.mean(full_gaps)), "full_starts": float(np.mean(full_starts)),
+                     "dlb_gap": float(np.mean(dlb_gaps)), "dlb_starts": float(np.mean(dlb_starts))})
+    return rows

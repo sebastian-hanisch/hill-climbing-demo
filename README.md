@@ -31,6 +31,7 @@ Die **Nachbarschaft** entscheidet mehr als die Startlösung: **2-opt + Or-opt** 
 | Gruppierte Stopps | ➖ 7.9 / 8.0 / 5.7 / 4.1 / 4.4 % bei 0 / 25 / 50 / 75 / 100 % der Stopps in fünf Gruppen |
 | 2-opt + Or-opt, Nächster Nachbar, steilster Abstieg | ✅ 0.05 / 1.1 / 3.4 / 4.4 / 5.3 / 5.1 % bei 20 / 40 / 60 / 100 / 150 / 200 Stopps nach 3 / 6 / 9 / 18 / 27 / 31 Zügen – die beste Kombination, aber auch sie wird mit der Größe schlechter |
 | Untere Schranke | ⚠️ Die 1-Baum-Schranke (Held-Karp, Subgradientenverfahren) liegt bei gleichverteilten 60 Stopps im Mittel **0.5 %** unter dem Optimum (CP-SAT), bei gruppierten **1.1 %** (ein Einzelfall 3.7 %): der angezeigte Abstand überschätzt die echte Lücke um diesen Betrag |
+| **Kandidatenlisten + Don't-Look-Bits** | ✅ Ein Abstieg erreicht dieselbe Güte (≈7 %) mit **rund 650 statt 74 000 bewerteten Nachbarn** – dem Hundertfachen weniger (nur noch rund die Hälfte davon sind echte 2-opt-Optima, gegen 100 % auf kleinen Testinstanzen). Bei gleichem Budget: 25 / 100 / 200 / 500 Tausend / 1 Million Vorschläge geben **1.3 / 1.0 / 0.8 / 0.7 / 0.7 %** über der Schranke (voller Rescan mit Neustarts: 7.9 / 7.9 / 4.9 / 2.9 / 2.5 %) |
 
 ## Was die Demo zeigt
 
@@ -38,7 +39,7 @@ Die **Nachbarschaft** entscheidet mehr als die Startlösung: **2-opt + Or-opt** 
    **Abstieg** (Zug-Regler und ▶️ Züge abspielen: die Tour nach jedem Zug, dazu die Kurve der Tourlänge über die Züge und die Schranke) → **Lokales Optimum** (vorher / nachher, Kontrolle: keiner der Nachbarn der Endtour ist kürzer).
 2. **Was die Suche gefunden hat:** Länge, Abstand zur Schranke, Züge (nach Art), bewertete Nachbarn und Rechenzeit; Urteil (`near_optimal` unter 3 % über der Schranke → `crossings` (Optimum der Nachbarschaft, aber Kreuzungen) → `stuck`), Detailtabelle.
 3. **📐 Sweeps** über Stopps, Anteil in Gruppen, Nachbarschaft, Startlösung und Auswahlregel (feste Instanzen ab 100000, Streuung).
-4. **🔬 Experimente auf Abruf:** alle 16 Kombinationen aus Nachbarschaft, Startlösung und Regel; **Mehrfachstart** mit 100 Abstiegen (Histogramm, bester Stand nach k Starts, verschiedene Optima, gemeinsame Kanten); **2-opt-Optima mit Or-opt weitersuchen**; **Skalierung** von 20 bis 200 Stopps für zwei Verfahren.
+4. **🔬 Experimente auf Abruf:** alle 16 Kombinationen aus Nachbarschaft, Startlösung und Regel; **Mehrfachstart** mit 100 Abstiegen (Histogramm, bester Stand nach k Starts, verschiedene Optima, gemeinsame Kanten); **2-opt-Optima mit Or-opt weitersuchen**; **Skalierung** von 20 bis 200 Stopps für zwei Verfahren; **Kandidatenlisten + Don't-Look-Bits** (nur bei 2-opt): ein Abstieg gegen den vollen Rescan, dazu Neustarts bei mehreren Budgets.
 5. **🚧 Grenzen:** Tabelle "Annahme – was passiert – wer setzt an" (nur verbessernde Züge, die Startlösung ist gleichgültig, die Nachbarschaft ist groß genug, alle Nachbarn zu bewerten ist billig, die Schranke ist das Optimum).
 
 Regler: Stopps (10–200), Anteil der Stopps in Gruppen (0–100 %), **Nachbarschaft** (Tausch / 2-opt / Or-opt / 2-opt + Or-opt), **Startlösung** (Zufällig / Nächster Nachbar), **Auswahlregel** (erste / beste Verbesserung), Seed der Instanz (+ 🎲), Seed der Startlösung (+ 🎲; bei Nächstem Nachbarn ausgeblendet, der Wert bleibt erhalten).
@@ -61,9 +62,10 @@ Die Presets zeigen einzelne Instanzen; die Mittelwerte über fünf Instanzen ste
 
 - **Instanz** (`hc_scenario.py`): Depot in der Mitte, n Stopps gleichverteilt oder zu einem einstellbaren Anteil in fünf Gruppen (Mittelpunkte mindestens 12 km vom Rand, Streuung 6 km), euklidische Entfernungen, alles durch den Seed festgelegt.
 - **Suche** (`hc_algorithm.py`, numpy von Grund auf): Tour als Permutation, zyklisch. Die Längenänderung **jedes** Nachbarn wird aus wenigen Kanten berechnet und je Suchdurchgang als N × N-Matrix bewertet (2-opt, Tausch, Or-opt je Segmentlänge 1–3, beide Richtungen; die Zahl der *logisch* bewerteten Nachbarn wird gezählt, bei erster Verbesserung nur bis zum ersten kürzenden). Erste Verbesserung = erster kürzender Nachbar in fester Reihenfolge, beste = kleinstes Delta.
-  Nach jedem Zug beginnt die Suche von vorn (keine Nachbarschaftslisten, keine Don't-Look-Bits – bewusst, damit die Kosten sichtbar bleiben). **Kreuzungen** werden über Orientierungstests gezählt.
+  Nach jedem Zug beginnt die Suche von vorn (keine Nachbarschaftslisten, keine Don't-Look-Bits – im Hauptteil bewusst, damit die Kosten sichtbar bleiben; siehe das Experiment unten). **Kreuzungen** werden über Orientierungstests gezählt.
 - **Untere Schranke:** 1-Baum (Prim auf den Knoten ohne das Depot + die zwei billigsten Depotkanten), **Held-Karp-Subgradientenverfahren** (300 Schritte, Polyak-Schrittweite mit der Länge eines guten lokalen Optimums als Ziel).
-- **Auswertung** (`hc_evaluation.py`): Kennzahlen, Sweeps und Vergleichstabellen über feste Instanzen (je drei Startlösungen), Mehrfachstart, Optima-Hierarchie (2-opt → 2-opt + Or-opt), Skalierung, Urteil.
+- **Kandidatenlisten + Don't-Look-Bits** (`hc_dlb.py`): derselbe 2-opt-Zug, aber je Vorschlag nur die 5 nächsten Knoten als Partner, Warteschlange nur über Knoten mit geänderten Kanten, Abbruch beim sortierten Kandidaten-Scan sobald keine Verkürzung mehr möglich ist (Standard-Heuristik, keine exakte Schranke).
+- **Auswertung** (`hc_evaluation.py`): Kennzahlen, Sweeps und Vergleichstabellen über feste Instanzen (je drei Startlösungen), Mehrfachstart, Optima-Hierarchie (2-opt → 2-opt + Or-opt), Skalierung, Kandidatenlisten + Don't-Look-Bits (Einzelabstieg und Neustarts bei mehreren Budgets), Urteil.
 
 ## Was nicht funktioniert hat / Grenzen
 
@@ -71,27 +73,29 @@ Die Presets zeigen einzelne Instanzen; die Mittelwerte über fünf Instanzen ste
   (3) "Erste gegen beste Verbesserung: gleiche Güte, die beste braucht mehr Bewertungen je Zug" – bestätigt, dazu **fünfmal so viele Bewertungen insgesamt** bei 2-opt + Or-opt (573 gegen 107 Tausend). (4) "Die lokalen Optima teilen sich viele Kanten mit der besten Tour" – **bestätigt** (74 %; eine zufällige Tour teilt im Erwartungswert nur 2/(N−1) ≈ 3 % ihrer Kanten mit einer beliebigen anderen). (5) "Züge wachsen mit n bis n log n" – Züge etwa 2- bis 5-mal n, **bewertete Nachbarn etwa mit n³** (das war die eigentliche Überraschung der Skalierung). (6) "Ein 2-opt-Optimum ist kein Or-opt-Optimum" – bestätigt (alle Fälle, 3.8 % weitere Verkürzung).
   Nicht vorhergesagt: die **Lücke wächst mit der Größe kaum** (9.5 % bei 200 Stopps), und dass die **Schranke** so eng ist (0.5 % im Mittel) – ohne Löser genügt sie als Maßstab.
 - **Kein exakter Löser in der Demo:** das Optimum (CP-SAT, `AddCircuit`) steht nur in den Tests als Kontrolle; die App misst gegen die Schranke.
-- **Synthetische Instanzen:** euklidisch, gleichverteilt oder in fünf Gruppen, ein Fahrzeug, keine Kapazitäten oder Zeitfenster. Wie sich die Verfahren auf Straßennetzen oder mit Nebenbedingungen verhalten, zeigt diese Demo nicht. Die Kosten (Bewertungen nach jedem Zug neu, n³) sind die der einfachen Implementierung; in der Praxis senken Nachbarschaftslisten und Don't-Look-Bits sie stark.
+- **Synthetische Instanzen:** euklidisch, gleichverteilt oder in fünf Gruppen, ein Fahrzeug, keine Kapazitäten oder Zeitfenster. Wie sich die Verfahren auf Straßennetzen oder mit Nebenbedingungen verhalten, zeigt diese Demo nicht. Die Kosten im Hauptteil (Bewertungen nach jedem Zug neu, n³) sind die der bewusst einfachen Implementierung; das Experiment "Kandidatenlisten + Don't-Look-Bits" misst, wie stark eine übliche Optimierung sie senkt: bei 60 Stopps um das Hundertfache, bei vergleichbarer Güte.
   Zahlen für Or-opt bei 200 Stopps sind langsam (einige Sekunden je Lauf).
-- **Nachtrag (2026-09-22):** "senken sie stark" wurde nachgemessen (Messreihe vor dem geplanten Lin-Kernighan-Stück, kein eigenes Demo-Stück): ein Kandidatenlisten- + Don't-Look-Bit-2-opt (5 nächste Knoten je Stopp) erreicht bei 60 Stopps dieselbe Güte (≈7 %) mit **rund 650 statt 74 000 bewerteten Nachbarn** – dem Hundertfachen weniger (bei 60 Stopps sind dann 51 % der Abstiege noch echte 2-opt-Optima, gegen 100 % auf kleinen Testinstanzen). Bei gleichem Budget schlägt Hill Climbing mit Neustarts damit sogar knapp die [simulated-annealing-demo](../simulated-annealing-demo) (0.7 / 0.6 % gegen 1.4 / 0.7 % bei 200 Tausend / 1 Million); Details dort im Nachtrag.
+- **Vorab-Vermutung zur Kandidatenlisten-Messreihe (2026-09-22, vor dem geplanten Lin-Kernighan-Stück gemessen):** "Nachbarschaftslisten und Don't-Look-Bits senken die Kosten stark" – bestätigt, aber die Konsequenz war nicht vorhergesagt: bei gleichem Budget wie in der [simulated-annealing-demo](https://sebastianhanisch-simulated-annealing-demo.streamlit.app/) schlägt Hill Climbing mit Neustarts (Kandidatenliste + DLB) damit dort bei 200 Tausend Vorschlägen **Simulated Annealing** (0.8 % gegen 1.4 %) und liegt bei 1 Million **gleichauf** (0.7 % beide) – der dort gezeigte Vorsprung von Simulated Annealing gilt nur für die bewusst einfache, volle Rescan-Implementierung des Hill Climbing, nicht für Hill Climbing an sich.
 
 ## Verifikation
 
 - **Algorithmus:** Längenänderung **jedes** Kandidaten (Tausch, 2-opt, Or-opt beider Richtungen, Segmentlängen 1–3, mit Umlauf über das Array-Ende) gegen die neu gemessene Tourlänge; Nachbarschaften gegen eine **unabhängige Aufzählung** mit expliziten Listenoperationen (Minimum und Anzahl der Nachbarn, Handformel N(N−3)/2 und Or-opt-Zählung); erste Verbesserung = erster kürzender Nachbar in Zeilenreihenfolge;
   Abstieg **strikt monoton**, endet in einem lokalen Optimum (per Vollprüfung mit der unabhängigen Aufzählung), deterministisch; ein 2-opt-Optimum ist **kreuzungsfrei**, Tausch und Or-opt lassen Kreuzungen stehen; Kreuzungszählung an Handinstanzen; Nächster Nachbar an Handinstanz; **1-Baum-Schranke**: Handinstanz (Quadrat), ≤ Optimum (Brute-Force n = 8, CP-SAT n = 25) und höchstens 3 % darunter.
-- **Alle Zahlen der App-Texte sind als Tests hinterlegt** (Seitenleiste, Presets, Vergleichstabelle, Mehrfachstart, Nachbarschaftswechsel, Skalierung, Grenzen-Tabelle, Schrankenlücke gegen CP-SAT; jeweils Mittel über die festen Sweep-Instanzen; positive **und** negative Aussagen; Rechenzeiten nur als Größenordnung);
-  alle 7 Presets über mehrere Instanzen und Startlösungen in Urteil-Bändern; AppTest-Rauchtests (Voreinstellung, jedes Preset, jeder Schritt bei 10 und 60 Stopps, Zug-Regler, ▶️ Abspielen und ▶️ Züge abspielen ohne doppelte Schlüssel, ausgeblendeter Start-Seed, Würfel-Knöpfe, Permalink-Grenzen, Extremwerte, Experimente auf Abruf, Footer).
+- **Kandidatenlisten + Don't-Look-Bits:** Permutation bleibt gültig, mitgeführte Länge = neu berechnete Länge, monoton, Bewertungsbudget; bei kleinen Instanzen **100 % echte 2-opt-Optima** (gegen `is_local_optimum`, unabhängig von der Kandidatenliste) und dieselbe Güte wie der volle Abstieg vom selben Start; bei 60 Stopps deutlich weniger Bewertungen für vergleichbare Güte.
+- **Alle Zahlen der App-Texte sind als Tests hinterlegt** (Seitenleiste, Presets, Vergleichstabelle, Mehrfachstart, Nachbarschaftswechsel, Skalierung, Kandidatenlisten + Don't-Look-Bits, Grenzen-Tabelle, Schrankenlücke gegen CP-SAT; jeweils Mittel über die festen Sweep-Instanzen; positive **und** negative Aussagen; Rechenzeiten nur als Größenordnung);
+  alle 7 Presets über mehrere Instanzen und Startlösungen in Urteil-Bändern; AppTest-Rauchtests (Voreinstellung, jedes Preset, jeder Schritt bei 10 und 60 Stopps, Zug-Regler, ▶️ Abspielen und ▶️ Züge abspielen ohne doppelte Schlüssel, ausgeblendeter Start-Seed, Würfel-Knöpfe, Permalink-Grenzen, Extremwerte, Experimente auf Abruf inkl. der Sperre auf 2-opt, Footer).
 
 ## Dateistruktur
 
 | Datei | Zweck |
 |---|---|
-| `app.py` | Streamlit-App: Schritte, Ergebnis, 📐 Sweeps, 🔬 Experimente (Vergleich, Mehrfachstart, Nachbarschaftswechsel, Skalierung), 🚧 Grenzen, Mathe |
-| `hc_algorithm.py` | Nachbarschaften und ihre Längenänderung, Abstieg, Kreuzungen, 1-Baum-Schranke, Mehrfachstart |
+| `app.py` | Streamlit-App: Schritte, Ergebnis, 📐 Sweeps, 🔬 Experimente (Vergleich, Mehrfachstart, Nachbarschaftswechsel, Skalierung, Kandidatenlisten + Don't-Look-Bits), 🚧 Grenzen, Mathe |
+| `hc_algorithm.py` | Nachbarschaften und ihre Längenänderung, Abstieg (mit Bewertungsbudget), Kreuzungen, 1-Baum-Schranke, Mehrfachstart |
+| `hc_dlb.py` | Kandidatenlisten + Don't-Look-Bits für 2-opt |
 | `hc_scenario.py`, `hc_constants.py` | Instanzen (gleichverteilt, in Gruppen); Konstanten, Presets |
-| `hc_evaluation.py` | Kennzahlen, Analyse, Urteil, Sweeps, Vergleichstabellen, Skalierung |
+| `hc_evaluation.py` | Kennzahlen, Analyse, Urteil, Sweeps, Vergleichstabellen, Skalierung, Kandidatenlisten + Don't-Look-Bits |
 | `hc_presets.py`, `hc_visualization.py` | Permalink/Presets (ausgeblendeter Start-Seed), Plotly-Figuren (achsengesperrt) |
-| `tests/` | Algorithmus (Brute-Force-Aufzählung, CP-SAT), Szenario und Auswertung, Aussagen der App, Presets, AppTest |
+| `tests/` | Algorithmus (Brute-Force-Aufzählung, CP-SAT), Kandidatenlisten + Don't-Look-Bits, Szenario und Auswertung, Aussagen der App, Presets, AppTest |
 
 ## Lokal ausführen
 

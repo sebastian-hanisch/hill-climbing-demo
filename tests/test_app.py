@@ -149,6 +149,20 @@ def test_scaling_experiment_runs_on_demand(monkeypatch):
     assert at.session_state["scaling_on"]
 
 
+def test_dlb_experiment_runs_on_demand_and_is_gated_to_two_opt(monkeypatch):
+    monkeypatch.setattr(C, "DLB_BUDGETS", (25000, 100000))
+    monkeypatch.setattr(C, "DLB_CHAINS", 2)
+    at = _run(n_slider=15)
+    assert next(b for b in at.button if b.key == "dlb_start")
+    next(b for b in at.button if b.key == "dlb_start").click().run()
+    _ok(at)
+    assert at.session_state["dlb_on"] and at.get("plotly_chart")
+    at.selectbox(key="neighborhood_select").set_value("oropt").run()
+    _ok(at)
+    assert not any(b.key == "dlb_start" for b in at.button)
+    assert any("nur für die Nachbarschaft 2-opt gemessen" in c.value for c in at.caption)
+
+
 def test_footer_and_grenzen_are_present():
     at = _run()
     assert any("Diese Demo ist Teil des Portfolios von [Sebastian Hanisch](https://sebastianhanisch.net)" in c.value for c in at.caption)

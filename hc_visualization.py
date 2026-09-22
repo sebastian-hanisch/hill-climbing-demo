@@ -150,3 +150,18 @@ def build_scaling(blocks):
     fig.update_xaxes(title_text="Stopps")
     fig.update_layout(legend=dict(orientation="h", y=-0.25))
     return _base(fig, 340)
+
+
+def build_dlb(single, budget_rows):
+    """Kandidatenlisten + Don't-Look-Bits gegen den vollen Rescan: links Bewertungen für einen Abstieg gleicher Güte
+    (Balken, logarithmisch), rechts Abstand zur Schranke über das Budget (beide mit Neustarts)."""
+    fig = make_subplots(rows=1, cols=2, subplot_titles=("Bewertungen für einen Abstieg (log.)", "Abstand zur Schranke über das Budget"), horizontal_spacing=0.12)
+    fig.add_trace(go.Bar(x=["voller Rescan", "Kandidatenliste + DLB"], y=[single["full_evaluations"], single["dlb_evaluations"]], marker_color=[TOUR_COLOR, NEW_COLOR], showlegend=False), row=1, col=1)
+    fig.update_yaxes(type="log", row=1, col=1)
+    xs = [r["value"] for r in budget_rows]
+    fig.add_trace(go.Scatter(x=xs, y=[r["full_gap"] for r in budget_rows], mode="lines+markers", line=dict(color=TOUR_COLOR, width=2.5), name="voller Rescan"), row=1, col=2)
+    fig.add_trace(go.Scatter(x=xs, y=[r["dlb_gap"] for r in budget_rows], mode="lines+markers", line=dict(color=NEW_COLOR, width=2.5), name="Kandidatenliste + DLB"), row=1, col=2)
+    fig.update_xaxes(type="log", row=1, col=2, title_text="Budget (Vorschläge)")
+    fig.update_yaxes(title_text="Abstand zur Schranke (%)", row=1, col=2)
+    fig.update_layout(legend=dict(orientation="h", y=-0.25))
+    return _base(fig, 340)

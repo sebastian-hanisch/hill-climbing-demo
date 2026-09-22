@@ -245,3 +245,46 @@ def test_run_times_are_of_the_stated_order_of_magnitude():
     assert time.perf_counter() - t0 < 30
     assert cfg()["seconds"] < 1.0
     assert cfg(neighborhood="2opt+oropt")["seconds"] < 5.0
+
+
+# --- Kandidatenlisten + Don't-Look-Bits (Experiment) ----------------------------------------------------------------------------------------
+
+
+@lru_cache(maxsize=None)
+def _dlb_single():
+    return ev.dlb_single_descent_table()
+
+
+@lru_cache(maxsize=None)
+def _dlb_budget():
+    return ev.dlb_budget_table()
+
+
+def test_dlb_single_descent_numbers():
+    r = _dlb_single()
+    near(r["full_evaluations"], 74000, 3000)
+    near(r["dlb_evaluations"], 650, 150)
+    near(r["full_gap"], 7.9, 0.9)
+    near(r["dlb_gap"], 7.0, 1.5)
+    assert r["full_evaluations"] / r["dlb_evaluations"] > 80          # gemessen: rund 110-fach
+
+
+@pytest.mark.parametrize("budget,dlb_gap,full_gap", [(25000, 1.3, 7.9), (100000, 1.0, 7.9), (200000, 0.8, 4.9), (500000, 0.7, 2.9), (1000000, 0.7, 2.5)])
+def test_dlb_budget_numbers(budget, dlb_gap, full_gap):
+    row = next(r for r in _dlb_budget() if r["value"] == budget)
+    near(row["dlb_gap"], dlb_gap, 0.6)
+    near(row["full_gap"], full_gap, 1.2)
+    assert row["dlb_gap"] < row["full_gap"]
+
+
+def test_dlb_true_local_optimum_share_at_sixty_stops():
+    hits, trials = 0, 0
+    Dm = ev.instance(60, 0, 100000)[1]                                # 61x61 (Depot + 60 Stopps)
+    cand = ev.DLB.build_candidate_lists(Dm)
+    for seed in range(20):
+        t0 = A.random_tour(len(Dm), np.random.default_rng(seed))
+        r = ev.DLB.dlb_descend(Dm, t0, cand, seed=seed)
+        trials += 1
+        if A.is_local_optimum(Dm, r.tour, "2opt"):
+            hits += 1
+    assert 0.3 <= hits / trials <= 0.75                              # gemessen: rund die Hälfte, App-Text sagt "rund die Hälfte"

@@ -16,7 +16,7 @@ import streamlit as st
 
 import hc_algorithm as A
 import hc_constants as C
-from hc_evaluation import SWEEP_LABELS, Settings, analyse, comparison_table, local_optimum_hierarchy, multi_start_report, scaling_table, sweep, verdict
+from hc_evaluation import SWEEP_LABELS, Settings, analyse, comparison_table, dlb_budget_table, dlb_single_descent_table, local_optimum_hierarchy, multi_start_report, scaling_table, sweep, verdict
 from hc_presets import (
     apply_preset,
     bounds,
@@ -26,7 +26,7 @@ from hc_presets import (
     randomize_start_seed,
     sync_query_params,
 )
-from hc_visualization import build_comparison, build_descent, build_instance, build_multistart, build_neighbor_deltas, build_scaling, build_sweep, build_tour
+from hc_visualization import build_comparison, build_descent, build_dlb, build_instance, build_multistart, build_neighbor_deltas, build_scaling, build_sweep, build_tour
 
 st.set_page_config(page_title="Hill Climbing – Sebastian Hanisch", layout="wide")
 
@@ -61,6 +61,16 @@ def _hierarchy(base):
 @st.cache_data(show_spinner=False)
 def _scaling(base):
     return scaling_table(base)
+
+
+@st.cache_data(show_spinner=False)
+def _dlb_single(base):
+    return dlb_single_descent_table(base)
+
+
+@st.cache_data(show_spinner=False)
+def _dlb_budget(base):
+    return dlb_budget_table(base)
 
 
 def _moves_text(kinds):
@@ -407,6 +417,33 @@ if st.session_state.get("scaling_on"):
 
 st.markdown("---")
 
+st.subheader("🔬 Kandidatenlisten + Don't-Look-Bits: was kostet die einfache Bewertung?")
+if settings.neighborhood != "2opt":
+    st.caption("Dieses Experiment ist nur für die Nachbarschaft 2-opt gemessen (Kandidatenlisten und Don't-Look-Bits für Or-opt und Tausch sind nicht Teil dieser Demo). "
+               "Wählen Sie 2-opt in der Seitenleiste, um es zu berechnen.")
+else:
+    if st.button("Kandidatenliste + Don't-Look-Bits gegen vollen Rescan berechnen (dauert etwa 30 Sekunden)", key="dlb_start"):
+        st.session_state["dlb_on"] = True
+    if st.session_state.get("dlb_on"):
+        base_dlb = Settings(cluster_share=settings.cluster_share)
+        with st.spinner("Rechne einen Abstieg und 5 Budgets × 5 Instanzen × 3 Ketten mit Neustarts..."):
+            dlb_single = _dlb_single(base_dlb)
+            dlb_rows = _dlb_budget(base_dlb)
+        st.plotly_chart(build_dlb(dlb_single, dlb_rows), width="stretch", key="dlb_chart")
+        d1, d2 = st.columns(2)
+        d1.metric("Bewertungen für ~7 % über der Schranke", f"{dlb_single['dlb_evaluations']:,.0f}".replace(",", "."), delta=f"voller Rescan {dlb_single['full_evaluations']:,.0f}".replace(",", "."), delta_color="off",
+                  help="Ein Abstieg vom selben Start: Kandidatenliste (5 nächste Knoten) + Don't-Look-Bits gegen den vollen Rescan, gleiche Güte.")
+        mid = dlb_rows[len(dlb_rows) // 2]
+        d2.metric(f"Neustarts bei {mid['value']:,.0f} Vorschlägen".replace(",", "."), f"{mid['dlb_starts']:.0f}", delta=f"voller Rescan {mid['full_starts']:.1f}", delta_color="off",
+                  help="Wie viele Abstiege bei gleichem Bewertungsbudget hineinpassen (der erste läuft immer zu Ende).")
+        st.caption("Mittel über 5 feste Instanzen (60 Stopps, gleichverteilt oder wie oben eingestellt) mit je drei Ketten; die Kandidatenliste hat immer 5 nächste Knoten je Stopp, unabhängig von der Stoppzahl in der Seitenleiste. "
+                   "Ein Abstieg erreicht dieselbe Güte (≈7 % über der Schranke) mit rund 650 statt 74 000 bewerteten Nachbarn – das Hundertfache weniger; bei gleichem Budget reicht das für weit mehr Neustarts: "
+                   "25 / 100 / 200 / 500 Tausend / 1 Million Vorschläge geben 1.3 / 1.0 / 0.8 / 0.7 / 0.7 % über der Schranke (voller Rescan mit Neustarts: 7.9 / 7.9 / 4.9 / 2.9 / 2.5 %, da ein einzelner Abstieg schon 74 Tausend braucht). "
+                   "Bei 60 Stopps landen dabei nur noch rund die Hälfte der Kandidatenlisten-Abstiege auf einem echten 2-opt-Optimum (gegen 100 % bei kleinen Instanzen) – die Kandidatenliste kostet Exaktheit, aber hier nicht Güte. "
+                   "Vergleich zur [Simulated-Annealing-Demo](https://sebastianhanisch-simulated-annealing-demo.streamlit.app/): bei 200 Tausend Vorschlägen schlägt Hill Climbing mit Neustarts dort Simulated Annealing (0.8 % gegen 1.4 %), bei 1 Million liegen beide gleichauf (0.7 %) - Details dort.")
+
+st.markdown("---")
+
 # --- Grenzen ----------------------------------------------------------------------------------------------------------------------------
 
 st.subheader("🚧 Wo die Annahmen enden")
@@ -417,7 +454,7 @@ st.markdown(
 | **Nur verbessernde Züge führen zum Ziel** | Die Suche bleibt im ersten lokalen Optimum stecken: 2-opt von zufälligen Startlösungen endet bei 60 Stopps im Mittel **7.9 %** über der Schranke (Streuung je Lauf von 0.9 bis 14.1 %). | **Simulated Annealing** (nimmt Verschlechterungen an), **Tabu Search** (Gedächtnis gegen Rückwege) |
 | **Die Startlösung ist gleichgültig** | 100 Abstiege aus zufälligen Startlösungen: nur 4 % enden höchstens 2 %, 25 % höchstens 5 % über der Schranke; der beste von 1 / 5 / 20 / 100 Starts liegt bei 7.9 / 4.0 / 1.8 / 1.2 %. Neustarts helfen, kosten aber jeder einen ganzen Abstieg. | **GRASP** (randomisierte Konstruktion, viele Starts), **Iterated Local Search** (stört ein Optimum statt neu zu starten) |
 | **Die Nachbarschaft ist groß genug** | Tausch allein bleibt bei **54.5 %** (16.3 % vom Nächsten Nachbarn) mit 13 Kreuzungen; Or-opt allein lässt 2.7 Kreuzungen stehen. Ein 2-opt-Optimum ist in 15 von 15 Fällen kein Optimum von 2-opt + Or-opt (weitere Verkürzung 3.8 %). | **VNS** (wechselt die Nachbarschaft systematisch), **ALNS** (lernt, welche Umbauten sich lohnen) |
-| **Alle Nachbarn zu bewerten ist billig** | Die Zahl der bewerteten Nachbarn wächst etwa mit n³: 74 Tausend bei 60, **4.0 Millionen** bei 200 Stopps (Züge etwa 2- bis 5-mal n). Die Demo bewertet nach jedem Zug alle Nachbarn neu. | Nachbarschaftslisten und Don't-Look-Bits innerhalb des Verfahrens (in der Demo bewusst weggelassen) |
+| **Alle Nachbarn zu bewerten ist billig** | Die Zahl der bewerteten Nachbarn wächst etwa mit n³: 74 Tausend bei 60, **4.0 Millionen** bei 200 Stopps (Züge etwa 2- bis 5-mal n). Die Demo bewertet im Hauptteil nach jedem Zug alle Nachbarn neu. | Nachbarschaftslisten und Don't-Look-Bits (Experiment oben: bei 60 Stopps nur noch ~650 Bewertungen für dieselbe Güte) |
 | **Die Schranke ist das Optimum** | Die 1-Baum-Schranke liegt bei gleichverteilten 60 Stopps im Mittel 0.5 % unter dem Optimum, bei gruppierten 1.1 % (in einem Einzelfall 3.7 %): der angezeigte Abstand überschätzt die echte Lücke. | Exakte Verfahren (CP-SAT, Branch-and-Cut; in den Tests der Demo als Kontrolle) |
 """
 )

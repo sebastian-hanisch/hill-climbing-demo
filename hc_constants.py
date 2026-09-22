@@ -59,3 +59,7 @@ PRESET_EXPECTED_BANDS = {
     "2-opt + Or-opt": {"stuck", "near_optimal"},
     "Große Instanz (200 Stopps)": {"stuck"},
 }
+
+# Kandidatenlisten + Don't-Look-Bits (hc_dlb.py): Budgetpunkte fuer den Mehrfachstart-Vergleich im Experiment
+DLB_BUDGETS = (25000, 100000, 200000, 500000, 1000000)
+DLB_CHAINS = 3

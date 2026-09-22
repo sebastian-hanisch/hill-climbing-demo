@@ -266,8 +266,8 @@ class Descent:
         return dict(self.kinds)
 
 
-def descend(D, tour, neighborhood="2opt", rule="first", max_moves=100000, keep_steps=True):
-    """Verbessernde Züge, bis keiner mehr existiert (lokales Optimum) oder `max_moves` erreicht sind."""
+def descend(D, tour, neighborhood="2opt", rule="first", max_moves=100000, keep_steps=True, max_evaluations=None):
+    """Verbessernde Züge, bis keiner mehr existiert (lokales Optimum), `max_moves` oder das Bewertungsbudget `max_evaluations` erreicht sind."""
     if neighborhood not in NEIGHBORHOODS:
         raise ValueError(neighborhood)
     if rule not in RULES:
@@ -277,6 +277,8 @@ def descend(D, tour, neighborhood="2opt", rule="first", max_moves=100000, keep_s
     steps = [Step(None, t.copy(), length)]
     evaluations, n_moves, kinds = 0, 0, {}
     for _ in range(max_moves):
+        if max_evaluations is not None and evaluations >= max_evaluations:        # Bewertungsbudget aufgebraucht (die Suche endet nach der Suche, die es überschreitet)
+            break
         move, count = find_move(t, D, neighborhood, rule)
         evaluations += count
         if move is None:

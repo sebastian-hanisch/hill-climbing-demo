@@ -166,6 +166,15 @@ def test_max_moves_stops_the_descent_early():
     assert r.n_moves == 3
 
 
+def test_max_evaluations_caps_the_evaluation_budget():
+    xy, D = _instance(40, 2)
+    start = A.random_tour(40, np.random.default_rng(1))
+    full = A.descend(D, start, "2opt", "first", keep_steps=False)
+    cut = A.descend(D, start, "2opt", "first", keep_steps=False, max_evaluations=full.evaluations // 3)
+    assert cut.n_moves < full.n_moves and cut.evaluations >= full.evaluations // 3 and cut.length > full.length
+    assert A.descend(D, start, "2opt", "first", keep_steps=False, max_evaluations=10 ** 9).n_moves == full.n_moves
+
+
 def test_a_two_opt_local_optimum_has_no_crossing_and_or_opt_can_leave_some():
     crossings_swap = []
     for seed in range(6):
