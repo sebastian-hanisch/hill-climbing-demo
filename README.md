@@ -73,6 +73,7 @@ Die Presets zeigen einzelne Instanzen; die Mittelwerte über fünf Instanzen ste
 - **Kein exakter Löser in der Demo:** das Optimum (CP-SAT, `AddCircuit`) steht nur in den Tests als Kontrolle; die App misst gegen die Schranke.
 - **Synthetische Instanzen:** euklidisch, gleichverteilt oder in fünf Gruppen, ein Fahrzeug, keine Kapazitäten oder Zeitfenster. Wie sich die Verfahren auf Straßennetzen oder mit Nebenbedingungen verhalten, zeigt diese Demo nicht. Die Kosten (Bewertungen nach jedem Zug neu, n³) sind die der einfachen Implementierung; in der Praxis senken Nachbarschaftslisten und Don't-Look-Bits sie stark.
   Zahlen für Or-opt bei 200 Stopps sind langsam (einige Sekunden je Lauf).
+- **Nachtrag (2026-09-22):** "senken sie stark" wurde nachgemessen (Messreihe vor dem geplanten Lin-Kernighan-Stück, kein eigenes Demo-Stück): ein Kandidatenlisten- + Don't-Look-Bit-2-opt (5 nächste Knoten je Stopp) erreicht bei 60 Stopps dieselbe Güte (≈7 %) mit **rund 650 statt 74 000 bewerteten Nachbarn** – dem Hundertfachen weniger (bei 60 Stopps sind dann 51 % der Abstiege noch echte 2-opt-Optima, gegen 100 % auf kleinen Testinstanzen). Bei gleichem Budget schlägt Hill Climbing mit Neustarts damit sogar knapp die [simulated-annealing-demo](../simulated-annealing-demo) (0.7 / 0.6 % gegen 1.4 / 0.7 % bei 200 Tausend / 1 Million); Details dort im Nachtrag.
 
 ## Verifikation
 
