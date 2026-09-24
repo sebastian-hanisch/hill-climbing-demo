@@ -24,6 +24,7 @@ from hc_presets import (
     load_permalink_settings,
     randomize_seed,
     randomize_start_seed,
+    seed_widget,
     sync_query_params,
 )
 from hc_visualization import build_comparison, build_descent, build_dlb, build_instance, build_multistart, build_neighbor_deltas, build_scaling, build_sweep, build_tour
@@ -149,6 +150,7 @@ with st.sidebar:
     seed = st.number_input("Zufalls-Seed der Instanz", *bounds("seed_input"), key="seed_input", step=1)
     st.button("🎲 Neue Instanz generieren", width="stretch", on_click=randomize_seed, help="Würfelt einen neuen Seed für die Lage der Stopps.")
     if start == "random":
+        seed_widget("start_seed_input")
         start_seed = st.number_input(
             "Zufalls-Seed der Startlösung", *bounds("start_seed_input"), key="start_seed_input", step=1,
             help="Welche zufällige Reihenfolge die Suche als Startlösung bekommt. Sie entscheidet, wo die Suche stecken bleibt: bei 60 Stopps, 2-opt und erster Verbesserung streut der Abstand zur Schranke über die 15 Läufe "
