@@ -461,7 +461,7 @@ st.markdown(
 """
 )
 st.caption(
-    "Die Nachbarn der Trajektorien-Metaheuristiken-Linie (noch nicht gebaut): Simulated Annealing, Iterated Local Search mit VNS und ALNS, Tabu Search und GRASP; mit dem genetischen Algorithmus der Populations-Linie ergäbe sich später ein Memetischer Algorithmus. "
+    "Die Nachbarn der Trajektorien-Metaheuristiken-Linie (alle gebaut): Simulated Annealing, Iterated Local Search mit VNS und ALNS, Tabu Search und GRASP; mit dem genetischen Algorithmus der Populations-Linie ergibt sich der Memetische Algorithmus. "
     "Die Wurzel ist bewusst die einfachste Suche: nur bergab."
 )
 
@@ -494,6 +494,6 @@ Implementiert in `hc_algorithm.py` (Nachbarschaften, Abstieg, Kreuzungen, 1-Baum
 st.markdown("---")
 st.caption(
     "Diese Demo ist Teil des Portfolios von [Sebastian Hanisch](https://sebastianhanisch.net) – "
-    "Operations Research und Machine Learning. Interesse an einer maßgeschneiderten Lösung für "
-    "Ihr Unternehmen? [Kontakt aufnehmen](https://sebastianhanisch.net/kontakt.html)"
+    "Operations Research und Machine Learning ([Über mich](https://sebastianhanisch.net/ueber-mich.html)). "
+    "Mehr zur Reihe: [Trajektorien-Metaheuristiken: HC bis ALNS](https://sebastianhanisch.net/konzepte-trajektorien-metaheuristiken.html)."
 )

@@ -10,11 +10,11 @@ Die Suche probiert kleine Änderungen – zwei Stopps **vertauschen**, ein Stüc
 ```
 hill-climbing-demo (Wurzel: nur bergab, bleibt im ersten Optimum stecken)   [dieses Stück]
   ├─ simulated-annealing-demo (nimmt Verschlechterungen an, Abkühlplan)                      [gebaut]
-  ├─ Iterated Local Search → VNS → ALNS  (stört ein Optimum; wechselt die Nachbarschaft; lernt Umbauten)   [nicht gebaut]
-  ├─ Tabu Search              (Gedächtnis gegen Rückwege)                                    [nicht gebaut]
-  └─ GRASP                    (randomisierte Konstruktion, viele Starts)                     [nicht gebaut]
+  ├─ Iterated Local Search → VNS → ALNS  (stört ein Optimum; wechselt die Nachbarschaft; lernt Umbauten)   [gebaut]
+  ├─ Tabu Search              (Gedächtnis gegen Rückwege)                                    [gebaut]
+  └─ GRASP                    (randomisierte Konstruktion, viele Starts)                     [gebaut]
 ```
-(Mit dem genetischen Algorithmus der Populations-Linie ergäbe sich später ein Memetischer Algorithmus.)
+(Mit dem genetischen Algorithmus der Populations-Linie ergibt sich der Memetische Algorithmus.)
 
 Ergebnis in Kürze: **2-opt von einer zufälligen Startlösung endet bei 60 Stopps im Mittel 7.9 % über einer unteren Schranke** (Streuung von 0.9 bis 14.1 % je Lauf); ein zweiter Start endet woanders – von 100 Abstiegen liegen nur 4 % höchstens 2 % über der Schranke.
 Die **Nachbarschaft** entscheidet mehr als die Startlösung: **2-opt + Or-opt** endet bei 3.7 %, jedes 2-opt-Optimum ließ sich mit Or-opt weiter verbessern (im Mittel 3.8 %). Eine **gute Startlösung** (Nächster Nachbar) spart vor allem Züge (17 statt 211); die Güte hebt sie nur mit steilstem Abstieg (4.0 % statt 7.9 %) – bei gruppierten Stopps ist sie mit erster Verbesserung sogar schlechter als Zufall.
@@ -116,6 +116,4 @@ pytest tests/ -v
 
 ---
 
-Teil des [Operations-Research-Demo-Portfolios](https://sebastianhanisch.net/demos.html) von
-[Sebastian Hanisch](https://sebastianhanisch.net) – Operations Research und Machine Learning.
-Interesse an einer maßgeschneiderten Lösung? [Kontakt aufnehmen](https://sebastianhanisch.net/kontakt.html).
+Diese Demo ist Teil des Portfolios von [Sebastian Hanisch](https://sebastianhanisch.net) – Operations Research und Machine Learning ([Über mich](https://sebastianhanisch.net/ueber-mich.html)). Mehr zur Reihe: [Trajektorien-Metaheuristiken: HC bis ALNS](https://sebastianhanisch.net/konzepte-trajektorien-metaheuristiken.html).
